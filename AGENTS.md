@@ -10,9 +10,12 @@ https://github.com/masshirodev/ranma/blob/main/doc/CONFIG.md (`ranma --dump-type
 - Keep to the API of the latest ranma release, which CI loads it into: a
   newer core function makes the plugin fail to load for everyone on the
   release.
-- `pane:watch` fires for a row it did not see at its last look, by the row's
-  text: a restarted server printing the same line is missed unless the watch
-  is re-armed (`rearm`). Do not "fix" that by scanning screens from a timer.
+- Needs ranma 0.2.2: `pane:watch` fires again for a second row like one
+  already matched (a server restarted under its old banner) and starts afresh
+  on `command_started`, so nothing re-arms watches on a timer or a delay; `r`
+  re-arms only for what `d` forgot while it is still on screen. The bar
+  module has no interval: whatever changes what it counts calls `refresh()`,
+  which runs `ranma.refresh_module("ports")`. Do not scan screens from a timer.
 - Check it loads: `ranma --check-config` lists every plugin and why one failed;
   `ranma lua` runs code in the live server. Test behaviour in a private server
   (its own `RANMA_CONFIG_DIR`, `XDG_RUNTIME_DIR` and tmux socket, with

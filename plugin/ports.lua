@@ -1,4 +1,5 @@
 -- ports: which panes are serving something on a local port.
+-- Needs ranma 0.2.2 or newer.
 --
 -- Every pane's screen is watched for the address a dev server prints as it
 -- starts: `http://localhost:5173/` (Vite), `127.0.0.1:3000` (cargo, axum),
@@ -14,20 +15,24 @@
 -- opens a screen of every serving pane. On it:
 --   enter  focus the pane      b  open the URL in the browser (ports.opener;
 --   y      copy the URL           over ssh it is copied instead)
---   d      forget it           r  look again: every screen, and ss
---   o      options
+--   d      forget it           r  look again: every screen (one
+--   o      options                 forgotten with d too), and ss
 -- Another key: ranma.bind("x", function() ranma.emit("ports_open") end).
 -- The bar module `ports` says how many are serving, nothing when none:
 -- `ranma.bar { right = { "ports", "clock" } }`.
 --
--- Where the shell marks its commands (OSC 133, ranma's CONFIG.md, "Hooks"), a
--- command finishing clears its pane, and a server restarted while its old
--- address is still on screen is seen again. Without the marks, press r for
--- that. A shell, editor or pager in the foreground (ports.ignore) is never
+-- A server restarted while its old address is still on screen is seen again
+-- as it prints it anew, whether or not the shell marks its commands. Where it
+-- does (OSC 133, ranma's CONFIG.md, "Hooks"), a command finishing clears its
+-- pane at once. A shell, editor or pager in the foreground (ports.ignore) is never
 -- taken for a server, so an address `cat` or `grep` printed is not one, and
 -- neither is one inside a connection string (`postgres://u@localhost:5432`).
 -- Options (settings panel, "ports" group): ports.verify, ports.recheck,
 -- ports.opener, ports.badges, ports.ignore.
+--
+-- Not done, as ranma has no way to: a port is not tied to the pane whose
+-- process holds it. The badge comes from what the pane printed, and ss only
+-- says the port listens somewhere on this machine.
 --
 -- ranma's plugin API: https://github.com/masshirodev/ranma/blob/main/doc/CONFIG.md ("Pane
 -- handles": watch and badge, "Timers and processes", "The bar").
@@ -210,7 +215,7 @@ local function open_url(url)
   ranma.notify("opening " .. url)
 end
 
-local refresh_screen, keep_timer
+local refresh, keep_timer
 
 local function forget(id, port)
   if not served[id] then return end
@@ -218,7 +223,7 @@ local function forget(id, port)
   if served[id] and next(served[id]) == nil then served[id] = nil end
   badge(id)
   save()
-  refresh_screen()
+  refresh()
   keep_timer()
 end
 
@@ -281,7 +286,10 @@ local function counted()
   return n == 1 and "1 serving" or (n .. " serving")
 end
 
-refresh_screen = function()
+-- The bar module has no interval: it is run again whenever what it counts
+-- may have changed.
+refresh = function()
+  ranma.refresh_module("ports")
   if not screen then return end
   screen:set { body = body(), count = counted(), status = status() }
 end
@@ -326,7 +334,7 @@ verify = function()
         badge(id)
       end
       keep_timer()
-      return refresh_screen()
+      return refresh()
     end
     local open = {}
     for line in (r.stdout or ""):gmatch("[^\n]+") do
@@ -363,7 +371,7 @@ verify = function()
       if changed then badge(id) end
     end
     if dropped then save(); keep_timer() end
-    refresh_screen()
+    refresh()
   end })
 end
 
@@ -397,7 +405,7 @@ local function found(e)
     listening = old and old.listening or nil }
   badge(id)
   save()
-  refresh_screen()
+  refresh()
   -- A moment for the server to bind, if it printed first.
   ranma.defer(300, verify)
 end
@@ -408,9 +416,10 @@ local function watch(p)
   if ok then watching[p.id] = w else ranma.notify("ports: " .. tostring(w)) end
 end
 
--- A watch fires for a row it has not seen at its last look, so a server
--- restarted while its old address is still on screen prints a row it has
--- seen, and is missed. A new watch has seen nothing and looks at once.
+-- A watch fires for a row it has not seen, or for one more row like it (a
+-- server restarted under its old banner), and starts afresh with each
+-- command. What it already took and was forgotten with d is still seen, so r
+-- watches anew: a new watch has seen nothing and looks at once.
 local function rearm(id)
   if watching[id] then ranma.unwatch(watching[id]) end
   watching[id] = nil
@@ -428,22 +437,13 @@ ranma.on("pane_close", function(e)
   if served[e.pane] then
     served[e.pane] = nil
     save()
-    refresh_screen()
+    refresh()
     keep_timer()
   end
 end)
 
--- A moment in, the command is the foreground program, and a look at the
--- screen takes what it printed for its own.
-local REARM = 500
-
 ranma.on("command_started", function(e)
-  local id = e.pane
-  running[id] = true
-  if served[id] then return end
-  ranma.defer(REARM, function()
-    if running[id] and not served[id] then rearm(id) end
-  end)
+  running[e.pane] = true
 end)
 
 -- The server was the command: it ended, and its address with it.
@@ -453,7 +453,7 @@ ranma.on("command_finished", function(e)
     served[e.pane] = nil
     badge(e.pane)
     save()
-    refresh_screen()
+    refresh()
     keep_timer()
   end
 end)
@@ -482,6 +482,7 @@ ranma.defer(0, function()
   end
   for _, p in ipairs(ranma.panes()) do watch(p) end
   save()
+  refresh()
   verify()
 end)
 
@@ -515,7 +516,6 @@ end
 
 -- `ports` in ranma.bar: how many are serving, nothing when none.
 ranma.module("ports", {
-  interval = 1,
   render = function()
     local n = count()
     if n == 0 then return nil end
@@ -533,7 +533,7 @@ ranma.on("option_change", function(e)
   if timer then ranma.cancel(timer); timer = nil end
   for id in pairs(served) do badge(id) end
   verify()
-  refresh_screen()
+  refresh()
 end)
 
 ranma.command("ports", open, { desc = "the panes serving something on a port" })

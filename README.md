@@ -2,6 +2,8 @@
 
 A plugin for [ranma](https://github.com/masshirodev/ranma), the terminal tiling window manager: the dev servers running across panes, badged with their ports, in a screen that focuses, opens or copies each one.
 
+Needs ranma 0.2.2 or newer.
+
 ## Install
 
 With [hako](https://github.com/masshirodev/hako.ranma), in `~/.config/ranma/lua/plugins/ports.lua`:
@@ -35,20 +37,24 @@ leader x p (in the pane folder), `ports` in the palette, or a click on the bar m
 opens a screen of every serving pane. On it:
   enter  focus the pane      b  open the URL in the browser (ports.opener;
   y      copy the URL           over ssh it is copied instead)
-  d      forget it           r  look again: every screen, and ss
-  o      options
+  d      forget it           r  look again: every screen (one
+  o      options                 forgotten with d too), and ss
 Another key: ranma.bind("x", function() ranma.emit("ports_open") end).
 The bar module `ports` says how many are serving, nothing when none:
 `ranma.bar { right = { "ports", "clock" } }`.
 
-Where the shell marks its commands (OSC 133, ranma's CONFIG.md, "Hooks"), a
-command finishing clears its pane, and a server restarted while its old
-address is still on screen is seen again. Without the marks, press r for
-that. A shell, editor or pager in the foreground (ports.ignore) is never
+A server restarted while its old address is still on screen is seen again
+as it prints it anew, whether or not the shell marks its commands. Where it
+does (OSC 133, ranma's CONFIG.md, "Hooks"), a command finishing clears its
+pane at once. A shell, editor or pager in the foreground (ports.ignore) is never
 taken for a server, so an address `cat` or `grep` printed is not one, and
 neither is one inside a connection string (`postgres://u@localhost:5432`).
 Options (settings panel, "ports" group): ports.verify, ports.recheck,
 ports.opener, ports.badges, ports.ignore.
+
+Not done, as ranma has no way to: a port is not tied to the pane whose
+process holds it. The badge comes from what the pane printed, and ss only
+says the port listens somewhere on this machine.
 
 ranma's plugin API: https://github.com/masshirodev/ranma/blob/main/doc/CONFIG.md ("Pane
 handles": watch and badge, "Timers and processes", "The bar").
@@ -89,7 +95,11 @@ In ranma's settings panel under `ports`, or with hako's `opts` (`{ "masshirodev/
 
 ## Costs
 
-It follows ranma's rule that Lua never runs per frame or per byte. A watch is looked at by ranma at most every 100 ms of output, over the screen only, and calls the plugin only for a new match. `ss` runs in the background through `ranma.spawn`, every `ports.recheck` seconds and only while some pane is serving; with none, the timer is off. The bar module renders once a second and only counts a table.
+It follows ranma's rule that Lua never runs per frame or per byte. A watch is looked at by ranma at most every 100 ms of output, over the screen only, and calls the plugin only for a new match. `ss` runs in the background through `ranma.spawn`, every `ports.recheck` seconds and only while some pane is serving; with none, the timer is off. The bar module has no interval: it renders when the plugin says what it counts may have changed (`ranma.refresh_module`), and then only counts a table.
+
+## Limits
+
+A port is not tied to the pane whose process holds it: ranma has no way to link a listening socket's pid to a pane's process tree. The badge comes from what the pane printed, and `ss` only says the port listens somewhere on this machine, so another program on the same port keeps a stopped server's badge.
 
 ## License
 
