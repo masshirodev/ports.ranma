@@ -10,7 +10,7 @@
 -- recompiling, or one that died where no shell said so) drops its badge until
 -- it listens again, and is forgotten once a shell is back in the foreground.
 --
--- leader O (shift+o), `ports` in the palette, or a click on the bar module
+-- leader x p (in the pane folder), `ports` in the palette, or a click on the bar module
 -- opens a screen of every serving pane. On it:
 --   enter  focus the pane      b  open the URL in the browser (ports.opener;
 --   y      copy the URL           over ssh it is copied instead)
@@ -539,5 +539,6 @@ end)
 ranma.command("ports", open, { desc = "the panes serving something on a port" })
 -- For a bind of the user's own: ranma.bind("x", function() ranma.emit("ports_open") end).
 ranma.on("user:ports_open", function() open() end)
--- WM mode ends as the screen opens: it has the keyboard from there.
-ranma.bind("shift+o", open, { desc = "ports", group = "plugins", exit = true })
+-- In ranma's own pane folder (leader x), not on a top-level key: plugins
+-- share those. WM mode ends as the screen opens: it has the keyboard then.
+ranma.bind("x p", open, { desc = "ports", exit = true })

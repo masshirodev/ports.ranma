@@ -31,7 +31,7 @@ machine (not which process holds it): one that is not (a server
 recompiling, or one that died where no shell said so) drops its badge until
 it listens again, and is forgotten once a shell is back in the foreground.
 
-leader O (shift+o), `ports` in the palette, or a click on the bar module
+leader x p (in the pane folder), `ports` in the palette, or a click on the bar module
 opens a screen of every serving pane. On it:
   enter  focus the pane      b  open the URL in the browser (ports.opener;
   y      copy the URL           over ssh it is copied instead)
@@ -64,14 +64,14 @@ ranma.bar { right = { "ports", "clock" } }
 
 | Key / command | |
 | --- | --- |
-| `leader O` (`shift+o`, under "plugins") | The screen of serving panes. |
+| `leader x p` (in ranma's `pane` folder) | The screen of serving panes. |
 | `ports` in the palette (`leader :`) | The same screen. |
 | A click on the `ports` bar module | The same screen. |
 
 Another key, in `init.lua` after the plugin loads:
 
 ```lua
-ranma.unbind("shift+o")
+ranma.unbind("x p")
 ranma.bind("<key>", function() ranma.emit("ports_open") end, { desc = "ports", exit = true })
 ```
 
