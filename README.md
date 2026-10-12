@@ -2,7 +2,7 @@
 
 A plugin for [ranma](https://github.com/masshirodev/ranma), the terminal tiling window manager: the dev servers running across panes, badged with their ports, in a screen that focuses, opens or copies each one.
 
-Needs ranma 0.2.2 or newer.
+Needs ranma v0.2.2 or newer.
 
 ## Install
 
@@ -65,6 +65,8 @@ To add it to the bar:
 ```lua
 ranma.bar { right = { "ports", "clock" } }
 ```
+
+Add `ports` to the bar only once the plugin is installed: a bar naming a module that no installed plugin declares makes every config reload fail.
 
 ## Binds and commands
 
